@@ -17,7 +17,8 @@ export class BigNumber {
       return m === 0 || Number.isNaN(m) ? ZERO : new BigNumber(Math.sign(m), EXP_LIMIT);
     }
     const shift = Math.floor(Math.log10(Math.abs(m)));
-    let nm = m / Math.pow(10, shift);
+    // Divide/multiply by an exact power of ten to avoid 0.6/0.1 = 5.999… drift.
+    let nm = shift >= 0 ? m / Math.pow(10, shift) : m * Math.pow(10, -shift);
     let ne = e + shift;
     // Correct floating-point drift at the boundaries.
     if (Math.abs(nm) >= 10) { nm /= 10; ne += 1; }
@@ -127,12 +128,12 @@ export class BigNumber {
   toNumber() {
     if (this.e > 308) return this.m > 0 ? Infinity : -Infinity;
     if (this.e < -324) return 0;
-    return this.m * Math.pow(10, this.e);
+    return this.e >= 0 ? this.m * Math.pow(10, this.e) : this.m / Math.pow(10, -this.e);
   }
 
   toJSON() {
-    // Round mantissa to avoid noisy save files.
-    return `${Number(this.m.toPrecision(15))}e${this.e}`;
+    // Number#toString is round-trip exact, so save/load never drifts.
+    return `${this.m}e${this.e}`;
   }
 
   toString() { return this.toJSON(); }

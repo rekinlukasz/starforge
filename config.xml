@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.starforge.galacticempire" version="0.1.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Starforge</name>
+    <description>Starforge: Galactic Empire — sci-fi idle clicker, budowa kolonii i kosmiczna ekonomia.</description>
+    <author email="styklukasz@gmail.com">Starforge</author>
+    <content src="index.html" />
+
+    <!-- Fully offline game: only the local app origin is allowed. -->
+    <access origin="https://localhost" />
+    <allow-intent href="market:*" />
+
+    <preference name="Orientation" value="landscape" />
+    <preference name="Fullscreen" value="true" />
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="BackgroundColor" value="0xff070b14" />
+    <preference name="KeepRunning" value="false" />
+
+    <platform name="android">
+        <preference name="android-minSdkVersion" value="24" />
+        <preference name="AndroidWindowSplashScreenBackground" value="#070B14" />
+        <preference name="AndroidPersistentFileLocation" value="Internal" />
+    </platform>
+</widget>

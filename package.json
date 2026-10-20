@@ -1,0 +1,29 @@
+{
+  "name": "com.starforge.galacticempire",
+  "displayName": "Starforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Starforge: Galactic Empire — sci-fi idle clicker i symulator kosmicznej gospodarki.",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sim": "node tools/simulate.mjs",
+    "fullrun": "node tools/fullrun.mjs",
+    "cordova:prepare": "cordova prepare android",
+    "cordova:build": "cordova build android",
+    "cordova:run": "cordova run android"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "happy-dom": "^21.0.3",
+    "vitest": "^5.0.5"
+  },
+  "cordova": {
+    "platforms": [],
+    "plugins": {}
+  }
+}

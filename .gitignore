@@ -37,3 +37,8 @@ build/
 
 ### Mac OS ###
 .DS_Store
+### Node / Cordova ###
+node_modules/
+platforms/
+plugins/
+coverage/
