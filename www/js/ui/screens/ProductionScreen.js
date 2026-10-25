@@ -137,7 +137,11 @@ export class ProductionScreen {
     const g = this.game;
     if (!def.recipe) {
       const capAdd = def.effects?.find((e) => e.type === 'capAdd');
-      return capAdd ? `Magazyny: +${Math.round(capAdd.value * 100)}% bazowej pojemności na poziom` : '';
+      if (capAdd) return `Magazyny: +${Math.round(capAdd.value * 100)}% bazowej pojemności na poziom`;
+      const capMult = def.effects?.find((e) => e.type === 'capMult');
+      if (!capMult) return '';
+      const total = Math.pow(capMult.value, g.buildings.level(def.id));
+      return `Magazyny: x${String(capMult.value).replace('.', ',')} na poziom (obecnie x${formatNumber(total)})`;
     }
     const rates = recipeRates(RECIPES[def.recipe]);
     const lvl = Math.max(1, g.buildings.level(def.id));

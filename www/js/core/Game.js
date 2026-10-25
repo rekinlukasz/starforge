@@ -258,8 +258,8 @@ export class Game {
     return this.prestige.buyUpgrade(id);
   }
 
-  rebirth(specialization, now = Date.now()) {
-    return this.prestige.rebirth(specialization, now);
+  rebirth(specialization, now = Date.now(), plan = {}) {
+    return this.prestige.rebirth(specialization, now, plan);
   }
 
   setRetreatThreshold(value) {

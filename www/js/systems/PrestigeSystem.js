@@ -46,9 +46,22 @@ export class PrestigeSystem {
     return this.ps.upgrades[id] ?? 0;
   }
 
-  upgradeCost(id) {
+  upgradeCost(id, level = this.upgradeLevel(id)) {
     const u = PRESTIGE_UPGRADE_MAP[id];
-    return Math.ceil(u.base * Math.pow(u.growth, this.upgradeLevel(id)));
+    return Math.ceil(u.base * Math.pow(u.growth, level));
+  }
+
+  // PP needed to buy `plan` ({ upgradeId: extra levels }) on top of the current
+  // levels. Infinity when the plan is invalid (unknown id or above maxLevel).
+  planCost(plan = {}) {
+    let total = 0;
+    for (const [id, n] of Object.entries(plan)) {
+      const u = PRESTIGE_UPGRADE_MAP[id];
+      const lvl = this.upgradeLevel(id);
+      if (!u || !Number.isInteger(n) || n < 0 || lvl + n > u.maxLevel) return Infinity;
+      for (let k = 0; k < n; k++) total += this.upgradeCost(id, lvl + k);
+    }
+    return total;
   }
 
   buyUpgrade(id) {
@@ -62,11 +75,15 @@ export class PrestigeSystem {
     return true;
   }
 
-  // Performs the rebirth. `specialization` must be a valid key.
-  rebirth(specialization, now = Date.now()) {
+  // Performs the rebirth. `specialization` must be a valid key. `plan` lists
+  // prestige upgrades bought with current + incoming points before the new
+  // cycle starts, so cycle-start upgrades (kit, recall, cartography) apply at once.
+  rebirth(specialization, now = Date.now(), plan = {}) {
     if (!this.canRebirth() || !PRESTIGE_SPECIALIZATIONS[specialization]) return false;
     const old = this.game.state;
     const points = this.pointsBreakdown().total;
+    const planCost = this.planCost(plan);
+    if (planCost > old.resources.prestigePoints.amount.toNumber() + points) return false;
     const fresh = createInitialState(now);
 
     // Kept ------------------------------------------------------------------
@@ -86,23 +103,27 @@ export class PrestigeSystem {
       totalEarned: old.prestige.totalEarned + points,
       specialization,
     };
-    const pp = old.resources.prestigePoints.amount.add(points);
+    for (const [id, n] of Object.entries(plan)) {
+      if (n > 0) fresh.prestige.upgrades[id] = this.upgradeLevel(id) + n;
+    }
+    const pp = old.resources.prestigePoints.amount.add(points).sub(planCost);
     fresh.resources.prestigePoints.amount = pp;
     fresh.resources.prestigePoints.unlocked = true;
 
     // Prestige upgrades that shorten the next cycle -------------------------
+    const levels = fresh.prestige.upgrades;
     const kit = PRESTIGE_UPGRADE_MAP.startingKit;
-    const kitLevel = old.prestige.upgrades.startingKit ?? 0;
+    const kitLevel = levels.startingKit ?? 0;
     if (kitLevel > 0) {
       for (const [r, v] of Object.entries(kit.kit)) {
         fresh.resources[r].amount = fresh.resources[r].amount.add(BigNumber.from(v * Math.pow(10, kitLevel - 1)));
       }
     }
-    const recall = old.prestige.upgrades.archiveRecall ?? 0;
+    const recall = levels.archiveRecall ?? 0;
     if (recall > 0) {
       for (const t of TECHNOLOGIES) if (t.tier <= recall && !t.condition) fresh.research.completed[t.id] = true;
     }
-    if ((old.prestige.upgrades.cartographyMemory ?? 0) > 0) {
+    if ((levels.cartographyMemory ?? 0) > 0) {
       fresh.space.sectors = JSON.parse(JSON.stringify(old.space.sectors));
       for (const [id, p] of Object.entries(old.space.planets)) {
         fresh.space.planets[id] = { status: p.status === 'colonized' ? 'analyzed' : p.status };

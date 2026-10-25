@@ -61,6 +61,13 @@ export const BUILDINGS = [
     description: 'Montuje układy sterujące z krzemu i metalu, chłodzone wodą.',
     baseCost: { alloy: 40, silicon: 120, metal: 100 }, growth: GROWTH.industrial, recipe: 'electronicsAssembly',
     unlock: { buildings: { alloyFoundry: 2, iceExtractor: 1 } } },
+  { id: 'storageComplex', name: 'Kompleks magazynowy', icon: 'depot', category: 'infrastructure',
+    description: 'Ciśnieniowe silosy ze stopów. Każdy poziom mnoży pojemność wszystkich magazynów x1,3.',
+    // Stacks with cargoDepot; cost growth 1.38 vs cap 1.3 keeps it a strong
+    // mid-game boost without outrunning costs on its own.
+    baseCost: { metal: 2000, alloy: 300, electronics: 100 }, growth: 1.38,
+    effects: [{ type: 'capMult', value: 1.3 }],
+    unlock: { buildings: { cargoDepot: 8, electronicsFactory: 1 } } },
 
   // Unlocked by research ---------------------------------------------------
   { id: 'fusionReactor', name: 'Reaktor fuzyjny', icon: 'fusion', category: 'energy',

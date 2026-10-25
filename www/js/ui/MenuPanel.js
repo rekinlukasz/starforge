@@ -2,6 +2,7 @@ import { h, clear } from './dom.js';
 import { icon } from './Icons.js';
 import { formatDuration, formatNumber } from '../utils/Formatter.js';
 import { RESOURCES } from '../../data/resources.js';
+import { prestigeUpgradeList } from './prestigeUpgrades.js';
 import { AUTOBUY_THRESHOLDS } from '../systems/AutomationSystem.js';
 
 // "More" panel: journal, storage overview and settings (save tools).
@@ -20,11 +21,23 @@ export class MenuPanel {
           this.entry('mission', 'Zadania', this.missionSummary(), () => this.ui.missionsPanel.openMissions()),
           this.entry('trophy', 'Osiągnięcia', `${this.game.achievements.count()} odblokowanych`, () => this.ui.missionsPanel.openAchievements()),
           this.entry('journal', 'Dziennik', 'Raporty i odkrycia stacji', () => this.openJournal()),
+          this.hasPrestige() ? this.entry('prestige', 'Prestiż', `${formatNumber(this.game.resources.amount('prestigePoints'))} PP do wydania`, () => this.openPrestige()) : null,
           this.entry('storage', 'Magazyn', 'Wszystkie zasoby i pojemności', () => this.openStorage()),
           this.entry('settings', 'Ustawienia', 'Zapis, eksport, import, offline', () => this.openSettings()),
         ]),
       ],
     });
+  }
+
+  // Prestige upgrades stay reachable after a rebirth, before the galaxy
+  // screen unlocks again.
+  hasPrestige() {
+    return this.game.state.prestige.rebirths > 0 || this.game.resources.amount('prestigePoints').gt(0);
+  }
+
+  openPrestige() {
+    const upgrades = prestigeUpgradeList(this.game);
+    this.ui.modals.open({ title: 'Ulepszenia prestiżu', icon: 'prestige', body: [upgrades.summary, upgrades.el] });
   }
 
   missionSummary() {

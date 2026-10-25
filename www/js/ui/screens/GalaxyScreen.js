@@ -1,12 +1,13 @@
 import { SECTORS } from '../../../data/sectors.js';
 import { MEGASTRUCTURES } from '../../../data/megastructures.js';
 import {
-  PRESTIGE_RESET, PRESTIGE_KEPT, PRESTIGE_UPGRADES, PRESTIGE_SPECIALIZATIONS, PRESTIGE_FORMULA,
+  PRESTIGE_RESET, PRESTIGE_KEPT, PRESTIGE_UPGRADE_MAP, PRESTIGE_SPECIALIZATIONS, PRESTIGE_FORMULA,
 } from '../../../data/prestige.js';
 import { h, setText, setClass, clear } from '../dom.js';
 import { icon } from '../Icons.js';
 import { costView } from '../components.js';
 import { effectText } from '../effectText.js';
+import { prestigeUpgradeList } from '../prestigeUpgrades.js';
 import { formatDuration, formatNumber } from '../../utils/Formatter.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -149,28 +150,12 @@ export class GalaxyScreen {
     if (g.state.prestige.specialization) specSelect.value = g.state.prestige.specialization;
     const understand = h('input', { type: 'checkbox', class: 'checkbox' });
 
-    const upgradesEl = h('div', { class: 'prestige-upgrades' });
-    const ppText = h('p');
-    const renderUpgrades = () => {
-      clear(upgradesEl);
-      setText(ppText, `Dostępne punkty prestiżu: ${formatNumber(g.resources.amount('prestigePoints'))}`);
-      for (const u of PRESTIGE_UPGRADES) {
-        const lvl = g.prestige.upgradeLevel(u.id);
-        const maxed = lvl >= u.maxLevel;
-        const cost = g.prestige.upgradeCost(u.id);
-        const btn = h('button', { class: 'btn btn-sm btn-primary', text: maxed ? 'Maks.' : `Kup (${cost} PP)` });
-        btn.disabled = maxed || g.resources.amount('prestigePoints').lt(cost);
-        btn.addEventListener('click', () => { g.buyPrestigeUpgrade(u.id); renderUpgrades(); });
-        upgradesEl.append(h('div', { class: 'colony-building' }, [
-          icon(u.icon, 'icon card-icon'),
-          h('div', { class: 'card-titles' }, [h('strong', { text: `${u.name} · ${lvl}/${u.maxLevel}` }), h('span', { class: 'muted', text: u.description })]),
-          btn,
-        ]));
-      }
-    };
-    renderUpgrades();
-
+    // When the rebirth is available, upgrades are queued against current +
+    // incoming points and bought as part of the rebirth.
     const can = g.prestige.canRebirth();
+    const plan = can ? {} : null;
+    const upgrades = prestigeUpgradeList(g, { plan, budget: g.resources.amount('prestigePoints').toNumber() + pts.total });
+
     const dialog = this.ui.modals.open({
       title: 'Galactic Rebirth',
       icon: 'prestige',
@@ -185,12 +170,13 @@ export class GalaxyScreen {
         h('h3', { text: 'Specjalizacja nowego cyklu' }),
         specSelect,
         h('h3', { text: 'Ulepszenia prestiżu' }),
-        ppText,
-        upgradesEl,
+        can ? h('p', { class: 'muted', text: 'Zaplanuj zakupy za obecne i zdobywane punkty — zostaną kupione przy odrodzeniu, więc działają już w nowym cyklu.' }) : null,
+        upgrades.summary,
+        upgrades.el,
         can ? h('label', { class: 'settings-row warn-row' }, [h('span', { text: 'Rozumiem, co zostanie zresetowane' }), understand]) : h('p', { class: 'negative', text: 'Warunki odrodzenia nie są jeszcze spełnione.' }),
       ],
       buttons: [
-        { label: 'Odrodź się', kind: 'danger', closes: false, onClick: () => this.confirmRebirth(specSelect.value) },
+        { label: 'Odrodź się', kind: 'danger', closes: false, onClick: () => this.confirmRebirth(specSelect.value, plan) },
         { label: 'Zamknij', kind: 'ghost' },
       ],
     });
@@ -200,17 +186,19 @@ export class GalaxyScreen {
   }
 
   // Second, separate confirmation so prestige can't happen by an accidental tap.
-  confirmRebirth(spec) {
+  confirmRebirth(spec, plan = {}) {
     const g = this.game;
     const pts = g.prestige.pointsBreakdown().total;
+    const planned = Object.entries(plan).map(([id, n]) => `${PRESTIGE_UPGRADE_MAP[id].name} +${n}`);
     this.ui.modals.open({
       title: 'Potwierdź odrodzenie',
       icon: 'prestige',
       dismissible: true,
-      body: [h('p', { text: `Ostatnie potwierdzenie: nowy cykl jako ${PRESTIGE_SPECIALIZATIONS[spec].name}, +${pts} punktów prestiżu. Tej operacji nie można cofnąć.` })],
+      body: [h('p', { text: `Ostatnie potwierdzenie: nowy cykl jako ${PRESTIGE_SPECIALIZATIONS[spec].name}, +${pts} punktów prestiżu. Tej operacji nie można cofnąć.` }),
+        planned.length ? h('p', { text: `Zakupione ulepszenia (${g.prestige.planCost(plan)} PP): ${planned.join(', ')}.` }) : null],
       buttons: [
         { label: 'Tak, rozpocznij nowy cykl', kind: 'danger', onClick: () => {
-          const got = g.rebirth(spec);
+          const got = g.rebirth(spec, Date.now(), plan);
           if (got) {
             this.ui.notify(`Galactic Rebirth! +${got} PP`, 'success');
             this.ui.navigation.go('home', { remember: false });

@@ -86,6 +86,25 @@ describe('Galactic Rebirth', () => {
     expect(g.buildings.costMultiplier()).toBeCloseTo(0.75);
   });
 
+  it('first rebirth can spend incoming points on upgrades that apply at once', () => {
+    const g = lateGame(); // 24 incoming points, none owned yet
+    const plan = { startingKit: 1, archiveRecall: 1, productionMatrix: 2 }; // 1 + 5 + (1 + 2)
+    expect(g.prestige.planCost(plan)).toBe(9);
+    expect(g.rebirth('scientist', T0 + 1000, plan)).toBe(24);
+    expect(g.prestige.upgradeLevel('productionMatrix')).toBe(2);
+    expect(g.resources.amount('prestigePoints').toNumber()).toBe(15);
+    expect(g.resources.amount('metal').toNumber()).toBe(520); // kit applied this cycle
+    expect(g.research.isCompleted('oreAnalysis')).toBe(true);
+  });
+
+  it('rejects unaffordable or over-max upgrade plans', () => {
+    const g = lateGame();
+    expect(g.prestige.planCost({ cartographyMemory: 2 })).toBe(Infinity);
+    expect(g.rebirth('scientist', T0 + 1000, { cartographyMemory: 2 })).toBe(false);
+    expect(g.rebirth('scientist', T0 + 1000, { researchLegacy: 10 })).toBe(false); // costs > 24
+    expect(g.state.prestige.rebirths).toBe(0);
+  });
+
   it('prestige-only technologies need a rebirth', () => {
     const g = newGame();
     research(g, 'dataMining');

@@ -131,4 +131,12 @@ describe('ProductionSystem', () => {
     setLevel(g, 'cargoDepot', 2);
     expect(g.resources.cap('metal').toNumber()).toBeCloseTo(base * 1.2 * 1.2); // x1.2 per level
   });
+
+  it('storage complex stacks with cargo depot', () => {
+    const g = freshGame();
+    const base = g.resources.cap('metal').toNumber();
+    setLevel(g, 'cargoDepot', 2);
+    setLevel(g, 'storageComplex', 2);
+    expect(g.resources.cap('metal').toNumber()).toBeCloseTo(base * 1.2 ** 2 * 1.3 ** 2);
+  });
 });

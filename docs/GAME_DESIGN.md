@@ -21,7 +21,7 @@ ma 32 technologie, bot klikający 5×/s — 33. Kliknięcia przyspieszają start
 
 | System | Gdzie | Najważniejsze decyzje |
 |---|---|---|
-| Zasoby (19) | `resources.js` | Odblokowanie przy pierwszym pozyskaniu; limity magazynów rosną mnożnikowo (magazyn x1,2/poziom). |
+| Zasoby (19) | `resources.js` | Odblokowanie przy pierwszym pozyskaniu; limity magazynów rosną mnożnikowo (magazyn ładunkowy x1,2/poziom, kompleks magazynowy x1,3/poziom). |
 | Budynki (31) | `buildings.js` | Wspólny system receptur; progi 10/25/50/100/200/400 poziomów dają x1,5 do wyjść. |
 | Receptury | `recipes.js` | Ciągły przepływ (ilość/czas partii) — agregacja i offline są dokładne. Brak wejść → proporcjonalne spowolnienie. |
 | Kliknięcia | `upgrades.js`, `ClickSystem` | Wartość płaska + mnożnik + udział w produkcji energii; przeciążenie; limit 20/s; autozapłon (2/s) późno. |
@@ -38,7 +38,7 @@ ma 32 technologie, bot klikający 5×/s — 33. Kliknięcia przyspieszają start
 | Flota (9 typów) | `ships.js`, `FleetSystem` | Kolejka stoczni (sloty = poziom stoczni), ulepszenia typów (+10%/poziom), naprawy w doku. |
 | Walka | `CombatSystem` | Deterministyczna; prognoza = wynik. Odwrót przy 25/50/75% kadłuba (ustawienie). Minimalna flota misji zawsze wygrywa (test). Walka nie blokuje progresji. |
 | Megastruktury (4) | `megastructures.js` | Etapy z kosztami z kolonii i wymaganą liczbą kolonii (2–6). |
-| Prestiż | `prestige.js` | Wymóg: 60 technologii, 3 kolonie, 1 etap megastruktury. Punkty: √(energia/1e8) + 3/kolonia + 5/etap. 7 ulepszeń trwałych, 5 specjalizacji, dwustopniowe potwierdzenie. |
+| Prestiż | `prestige.js` | Wymóg: 60 technologii, 3 kolonie, 1 etap megastruktury. Punkty: √(energia/1e8) + 3/kolonia + 5/etap. 7 ulepszeń trwałych, 5 specjalizacji, dwustopniowe potwierdzenie. Ulepszenia można zaplanować w oknie odrodzenia za obecne + zdobywane PP (kupowane przy odrodzeniu, działają od razu w nowym cyklu); później dostępne w menu „Więcej” → Prestiż. |
 
 ## Zasady stosowania bonusów
 
