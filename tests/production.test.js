@@ -33,10 +33,10 @@ describe('ProductionSystem', () => {
 
   it('single building produces according to its recipe', () => {
     const g = freshGame();
-    setLevel(g, 'asteroidMine', 1); // +0.5 metal/s, -0.2 energy/s
+    setLevel(g, 'asteroidMine', 1); // +0.5 metal/s, -0.4 energy/s
     g.simulate(10);
     expect(g.resources.amount('metal').toNumber()).toBeCloseTo(20 + 10 * (0.5 + 0.2));
-    expect(g.resources.amount('energy').toNumber()).toBeCloseTo(50 + 10 - 2);
+    expect(g.resources.amount('energy').toNumber()).toBeCloseTo(50 + 10 - 4);
   });
 
   it('levels sum linearly', () => {
@@ -53,8 +53,8 @@ describe('ProductionSystem', () => {
     g.modifiers.invalidate();
     g.simulate(10);
     expect(g.resources.amount('metal').toNumber()).toBeCloseTo(20 + (2 * 0.5 * 2 + 0.2) * 10);
-    // energy use unchanged: 2 * 0.2 * 10 = 4
-    expect(g.resources.amount('energy').toNumber()).toBeCloseTo(50 + 10 - 4);
+    // energy use unchanged: 2 * 0.4 * 10 = 8
+    expect(g.resources.amount('energy').toNumber()).toBeCloseTo(50 + 10 - 8);
   });
 
   it('milestones multiply outputs', () => {
@@ -63,8 +63,8 @@ describe('ProductionSystem', () => {
     expect(g.buildings.milestoneMultiplier('solarArray')).toBe(1.5);
     g.state.resources.energy.amount = BigNumber.ZERO;
     g.simulate(1);
-    // 10 * 2 * 1.5 + 1 (core) = 31
-    expect(g.resources.amount('energy').toNumber()).toBeCloseTo(31);
+    // 10 * 1 * 1.5 + 1 (core) = 16
+    expect(g.resources.amount('energy').toNumber()).toBeCloseTo(16);
   });
 
   it('consumes inputs to make outputs (recipe chain)', () => {
@@ -120,8 +120,8 @@ describe('ProductionSystem', () => {
     g.simulate(1);
     const bal = g.production.balance('energy');
     expect(bal.income.toNumber()).toBeCloseTo(1);
-    expect(bal.expense.toNumber()).toBeCloseTo(0.4);
-    expect(bal.net.toNumber()).toBeCloseTo(0.6);
+    expect(bal.expense.toNumber()).toBeCloseTo(0.8);
+    expect(bal.net.toNumber()).toBeCloseTo(0.2);
     expect(bal.timeToCap).toBeGreaterThan(0);
   });
 

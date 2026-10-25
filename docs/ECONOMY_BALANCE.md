@@ -74,6 +74,7 @@ dopiero po odrodzeniu), skolonizował 10/10 planet i ukończył 3/4 megastruktur
 | Zakleszczenie: napęd warp kosztował egzotyczną materię, której źródło wymaga napędu warp | Usunięty koszt; test regresyjny |
 | Łańcuch zadań wymagał klikania — bot idle odebrał 0/22 zadań | Zadanie kliknięć poza łańcuchem; test „tutorial does not require clicking” |
 | Minimalna flota misji bojowej nie mogła wygrać (prognoza w UI) | Przestrojeni przeciwnicy, 12 rund; test „minimum fleet wins” |
+| Nadmiar energii: panel 11. poziomu dawał ~74/s przy zużyciu 5/s przez kopalnię 25. poziomu (zgłoszenie gracza) | Panel 1 energii/s (było 2), Powłoka fotonowa x1,5 (było x2), kopalnia 0,4/s i odwiert 0,5/s energii na poziom (było 0,2 i 0,3); `npm run sim` — tempo postępu bez zmian |
 | Zbyt szybka progresja: odrodzenie po 1h44m, 143 mln danych po 12 h (`fullrun`) | Skalowanie kosztów/czasu badań wg poziomu, ostrzejszy wymóg prestiżu |
 | Artefakty z Ossuarium w nadmiarze (11 tys. po 24 h) | Złoże 0,01 → 0,0005/s na poziom |
 | Platforma inżynierii gwiezdnej wymagała 5 egzotycznej materii przy jednym jednorazowym źródle | Koszt 2; nowa powtarzalna misja „Zbiór egzotycznej materii” |

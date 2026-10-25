@@ -5,9 +5,9 @@
 // aggregate many building levels into a single rate.
 
 export const RECIPES = {
-  solarPower:          { inputs: {}, outputs: { energy: 2 }, duration: 1, batch: 1 },
-  asteroidMining:      { inputs: { energy: 0.4 }, outputs: { metal: 1 }, duration: 2, batch: 1 },
-  siliconDrilling:     { inputs: { energy: 0.6 }, outputs: { silicon: 0.6 }, duration: 2, batch: 1 },
+  solarPower:          { inputs: {}, outputs: { energy: 1 }, duration: 1, batch: 1 },
+  asteroidMining:      { inputs: { energy: 0.8 }, outputs: { metal: 1 }, duration: 2, batch: 1 },
+  siliconDrilling:     { inputs: { energy: 1 }, outputs: { silicon: 0.6 }, duration: 2, batch: 1 },
   iceExtraction:       { inputs: { energy: 0.8 }, outputs: { water: 1 }, duration: 2, batch: 1 },
   basicResearch:       { inputs: { energy: 2 }, outputs: { researchData: 1 }, duration: 4, batch: 1 },
   alloySmelting:       { inputs: { metal: 4, energy: 2 }, outputs: { alloy: 1.5 }, duration: 4, batch: 1 },
