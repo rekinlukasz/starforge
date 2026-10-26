@@ -10,6 +10,7 @@ import { planetArt } from '../PlanetArt.js';
 import { openLaunchDialog } from '../LaunchDialog.js';
 import { formatNumber, formatRate, formatDuration } from '../../utils/Formatter.js';
 import { TRANSMITTED } from '../../systems/ColonySystem.js';
+import { defaultPlanet } from '../../render3d/layout.js';
 
 const STATUS = { discovered: 'Odkryta', analyzed: 'Przeanalizowana', colonized: 'Kolonia' };
 const perSec = (map) => Object.entries(map).map(([r, v]) => `${RESOURCE_MAP[r].name} ${formatNumber(v)}/s`).join(', ');
@@ -32,6 +33,8 @@ export class PlanetsScreen {
       this.grid,
     ]);
     root.addEventListener('click', (e) => {
+      const card = e.target.closest('[data-planet]');
+      if (card) this.focus(card.dataset.planet);
       const t = e.target.closest('[data-action]');
       if (!t || t.disabled) return;
       const { action, id } = t.dataset;
@@ -40,6 +43,22 @@ export class PlanetsScreen {
       if (action === 'manage') this.openColony(id);
     });
     return root;
+  }
+
+  // Planet shown in 3D behind the list (first colony or first known by default).
+  focus(id) {
+    this.focused = id;
+    this.ui.focusPlanet(id);
+    for (const c of this.cards ?? []) setClass(c.card, 'focused', c.p.id === id);
+  }
+
+  attach3D() {
+    const g = this.game;
+    this.focus(this.focused ?? defaultPlanet(g));
+  }
+
+  sceneOptions() {
+    return { anchor: () => ({ x: window.innerWidth * (window.innerWidth > 760 ? 0.76 : 0.5), y: window.innerHeight * 0.55 }) };
   }
 
   rebuild() {
@@ -56,7 +75,7 @@ export class PlanetsScreen {
       const note = h('div', { class: 'card-note' });
       const info = h('div', { class: 'planet-info' });
       const colony = g.colonies.colony(p.id);
-      const card = h('article', { class: 'card planet-card' }, [
+      const card = h('article', { class: 'card planet-card', dataset: { planet: p.id } }, [
         h('div', { class: 'planet-head' }, [
           planetArt(p.type, p.id, { size: 84, terraformStage: colony?.terraform.stage ?? 0 }),
           h('div', { class: 'card-titles' }, [
@@ -70,14 +89,19 @@ export class PlanetsScreen {
         h('footer', { class: 'card-foot' }, [note, btn]),
       ]);
       this.grid.append(card);
-      this.cards.push({ p, status, btn, note, info });
+      this.cards.push({ p, card, status, btn, note, info });
     }
   }
 
   update() {
     const g = this.game;
     const sig = g.planets.knownPlanets().map((p) => p.id + g.planets.status(p.id)).join(',');
-    if (sig !== this.sig) { this.sig = sig; this.rebuild(); }
+    if (sig !== this.sig) {
+      this.sig = sig;
+      this.rebuild();
+      if (!this.focused && this.ui.renderer3d) this.focus(defaultPlanet(g));
+      else if (this.focused) this.focus(this.focused);
+    }
     setText(this.summary, `Znane: ${g.planets.knownPlanets().length}/${PLANETS.length} · kolonie: ${g.colonies.ids().length}`);
     for (const c of this.cards ?? []) this.updateCard(c);
   }

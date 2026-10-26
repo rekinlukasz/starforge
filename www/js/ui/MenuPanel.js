@@ -91,6 +91,15 @@ export class MenuPanel {
     }
     offlineSelect.addEventListener('change', () => this.game.setOfflineCap(offlineSelect.value));
 
+    const graphics = h('select', { class: 'input', 'aria-label': 'Grafika 3D' });
+    for (const [v, label] of [['auto', 'Automatycznie'], ['high', 'Wysoka'], ['low', 'Niska (oszczędna)'], ['off', 'Wyłączona (2D)']]) {
+      const opt = h('option', { value: v, text: label });
+      if (v === s.graphics) opt.selected = true;
+      graphics.append(opt);
+    }
+    graphics.addEventListener('change', () => this.game.setGraphics(graphics.value));
+    const graphicsNote = this.ui.renderer3d ? `Aktywna: ${this.ui.renderer3d.quality.name === 'high' ? 'wysoka' : 'niska'}` : (s.graphics === 'off' ? 'Wyłączona' : 'Niedostępna na tym urządzeniu (brak WebGL)');
+
     const motion = h('input', { type: 'checkbox', class: 'checkbox' });
     motion.checked = s.reduceMotion;
     motion.addEventListener('change', () => this.game.setReduceMotion(motion.checked));
@@ -118,6 +127,8 @@ export class MenuPanel {
       icon: 'settings',
       body: [
         h('div', { class: 'settings-row' }, [h('label', { text: 'Limit produkcji offline' }), offlineSelect]),
+        h('div', { class: 'settings-row' }, [h('label', { text: 'Grafika 3D' }), graphics]),
+        h('p', { class: 'muted', text: graphicsNote }),
         h('label', { class: 'settings-row' }, [h('span', { text: 'Ogranicz animacje' }), motion]),
         ...autoRows,
         h('p', { class: 'muted', text: `Efektywny limit offline: ${this.game.offline.capHours()} h (z technologiami)` }),

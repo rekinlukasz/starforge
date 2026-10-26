@@ -1,0 +1,99 @@
+/* 3D layer. Active only when html.has-3d is set by Renderer3D; without it
+   the game keeps its original 2D look. */
+
+.scene3d {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+  pointer-events: none;
+}
+#root { position: relative; z-index: 1; }
+
+.galaxy-viewport { display: none; }
+
+html.has-3d body { background: #05080f; }
+
+/* Glass panels over the scene. Plain rgba (no backdrop blur) keeps
+   low-end Android GPUs fast. */
+html.has-3d .topbar { background: linear-gradient(180deg, rgba(7, 11, 20, 0.92), rgba(7, 11, 20, 0.55)); border-bottom-color: rgba(34, 50, 79, 0.6); }
+html.has-3d .bottom-nav { background: rgba(6, 10, 18, 0.88); }
+html.has-3d .res-chip { background: rgba(17, 26, 43, 0.82); }
+html.has-3d .panel,
+html.has-3d .card,
+html.has-3d .expedition,
+html.has-3d .route,
+html.has-3d .route-form {
+  background: linear-gradient(180deg, rgba(17, 26, 43, 0.84), rgba(11, 18, 32, 0.8));
+  border-color: rgba(34, 50, 79, 0.85);
+}
+html.has-3d .tree-scroll { background: rgba(7, 11, 20, 0.72); }
+html.has-3d .modal-layer { background: rgba(3, 6, 12, 0.6); }
+
+/* Home: the reactor itself is rendered in 3D right under this button. */
+html.has-3d .reactor-panel { background: none; }
+html.has-3d .reactor {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 50%;
+}
+html.has-3d .reactor .reactor-ring,
+html.has-3d .reactor .reactor-core { opacity: 0; }
+html.has-3d .reactor:focus-visible { outline: 2px solid var(--accent); }
+html.has-3d .station-name h1 { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
+html.has-3d .reactor-value { color: var(--text); text-shadow: 0 1px 6px #000; }
+
+/* Galaxy: interactive viewport replaces the 2D SVG map. */
+html.has-3d .galaxy-wrap { display: none; }
+html.has-3d .galaxy-panel { background: linear-gradient(180deg, rgba(17, 26, 43, 0.55), rgba(11, 18, 32, 0.25)); }
+html.has-3d .galaxy-viewport {
+  display: block;
+  position: relative;
+  height: clamp(240px, 55vh, 480px);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(63, 208, 201, 0.25);
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+.galaxy-viewport:active { cursor: grabbing; }
+.viewport-hint {
+  position: absolute; left: 10px; bottom: 8px;
+  font-size: 0.72rem; color: var(--text-dim);
+  text-shadow: 0 1px 4px #000; pointer-events: none;
+}
+.sector-label {
+  position: absolute; left: 0; top: 0;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--text-dim);
+  will-change: transform;
+}
+.sector-label .map-label {
+  display: block;
+  transform: translate(-50%, -190%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(5, 8, 15, 0.6);
+  border: 1px solid transparent;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.sector-label.known { color: var(--text); }
+.sector-label.selected .map-label { border-color: var(--accent); color: var(--accent); }
+.sector-info {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(63, 208, 201, 0.35);
+  background: rgba(11, 18, 32, 0.9);
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+/* Planets: list on the left, the focused globe on the right (wide screens). */
+.planet-card.focused { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(63, 208, 201, 0.35); }
+.planet-card { cursor: pointer; }
+@media (min-width: 761px) {
+  html.has-3d .screen-planets .planet-grid { max-width: 52%; grid-template-columns: 1fr; }
+}

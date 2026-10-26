@@ -110,6 +110,34 @@ export class UIManager {
     for (const [sid, screen] of this.screens) screen.el.hidden = sid !== id;
     this.content.scrollTop = 0;
     this.screens.get(id)?.update();
+    this.syncScene();
+  }
+
+  // ---- 3D layer (optional; the UI works identically without it) ---------
+
+  attach3D(renderer) {
+    this.renderer3d = renderer;
+    for (const screen of this.screens.values()) screen.attach3D?.(renderer);
+    if (!this.pulseHooked) {
+      this.pulseHooked = true;
+      this.game.events.on('click', () => this.renderer3d?.pulseReactor());
+    }
+    this.syncScene();
+  }
+
+  detach3D() {
+    for (const screen of this.screens.values()) screen.detach3D?.();
+    this.renderer3d = null;
+  }
+
+  syncScene() {
+    if (!this.renderer3d || !this.navigation.current) return;
+    const screen = this.screens.get(this.navigation.current);
+    this.renderer3d.setScreen(this.navigation.current, screen?.sceneOptions?.() ?? {});
+  }
+
+  focusPlanet(id) {
+    this.renderer3d?.focusPlanet(id);
   }
 
   render() {

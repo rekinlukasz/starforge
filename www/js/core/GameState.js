@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS = {
   autosaveSeconds: 30,
   reduceMotion: false,
   retreatAt: 0.5, // combat: withdraw when fleet hull falls below this share
+  graphics: 'auto', // 3D layer: auto | high | low | off
 };
 
 // Full state model. BigNumber values serialize as "<mantissa>e<exponent>".

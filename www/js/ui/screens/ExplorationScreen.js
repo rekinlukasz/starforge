@@ -44,6 +44,10 @@ export class ExplorationScreen {
     return root;
   }
 
+  sceneOptions() {
+    return { anchor: () => ({ x: window.innerWidth * 0.62, y: window.innerHeight * 0.55 }) };
+  }
+
   claim(uid) {
     const r = this.game.claimExpedition(uid);
     if (!r) return;

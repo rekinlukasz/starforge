@@ -106,6 +106,16 @@ export class HomeScreen {
     return h('div', { class: 'screen screen-home' }, [reactorPanel, side]);
   }
 
+  // The 3D reactor is drawn exactly under the (then transparent) DOM button.
+  sceneOptions() {
+    return {
+      anchor: () => {
+        const r = this.reactor.getBoundingClientRect();
+        return r.width ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
+      },
+    };
+  }
+
   onReactor(event) {
     const gained = this.game.click();
     if (!gained) return;

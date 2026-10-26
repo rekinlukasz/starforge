@@ -13,6 +13,9 @@ www/js/systems/      logika domenowa bez DOM (patrz niżej)
 www/js/persistence/  SaveManager, SaveMigration (v1→v5), StorageAdapter
 www/js/ui/           UIManager, 7 ekranów, panele, okna; tylko czytają stan i wołają akcje Game
 www/js/utils/        BigNumber, Formatter, Validation (+ ValidationSpace)
+www/js/render3d/     opcjonalna warstwa 3D (Three.js): Renderer3D, StationView, PlanetView,
+                     GalaxyView, proceduralne tekstury/modele, czysta logika układu (layout.js)
+www/vendor/          three.module.min.js (kopiowany przez `npm run vendor`)
 tools/               serwer deweloperski, symulacje ekonomii (sim, fullrun)
 tests/               Vitest: 9 plików, 150 testów (logika bez DOM + ścieżki UI w happy-dom)
 ```
@@ -73,3 +76,22 @@ Serializacja `"<m>e<e>"` (dokładna w obie strony). `toNumber()` tylko dla mały
 Brak pluginów. `deviceready` → start; `pause` → symulacja do teraz + zapis + stop pętli;
 `resume` → krótka luka na żywo, długa przez raport; `backbutton` → okno → poprzednia zakładka →
 zapis i wyjście. Orientacja pozioma (`config.xml`), obszary bezpieczne przez `env(safe-area-inset-*)`.
+
+## Warstwa 3D
+
+- Jedno płótno WebGL (`.scene3d`, `position: fixed`) pod całym interfejsem; HTML pozostaje na
+  wierzchu (`#root`, z-index 1). Klasa `html.has-3d` przełącza style na półprzezroczyste panele.
+- Ładowana leniwie przez `import()` w `app.js` po starcie gry; brak WebGL, błąd lub ustawienie
+  „Wyłączona” = interfejs 2D bez zmian. Zmiana jakości w Ustawieniach odtwarza renderer w locie.
+- Sceny tylko **czytają** `game.state` (nigdy nie zapisują); przebudowują geometrię wyłącznie, gdy
+  zmienia się sygnatura widocznych liczników (moduły, asteroidy, statki, planeta w centrum).
+- `layout.js` (bez Three.js, testowany): mapowanie zakładka → scena, profile jakości, liczba modułów
+  z poziomów budynków, pozycje sektorów (wspólne z mapą 2D), trasy flot, stan sektora.
+- Kotwiczenie: każdy ekran podaje `sceneOptions()` z punktem na ekranie; `camera.setViewOffset`
+  przesuwa projekcję tak, by środek sceny wypadał w tym punkcie (np. reaktor 3D pod przyciskiem
+  reaktora, galaktyka w oknie mapy). Etykiety sektorów to elementy DOM pozycjonowane co klatkę.
+- Wydajność: limit klatek (60/30, 12 przy „Ogranicz animacje”), pixelRatio ≤ 1,5, `InstancedMesh`
+  dla modułów/asteroid/paneli, statki scalane do jednej siatki, pauza w tle, obsługa
+  `webglcontextlost/restored`.
+- Bez zewnętrznych zasobów: tekstury planet, mgławice i poświaty rysowane na płótnie 2D z
+  deterministycznego szumu; modele statków składane z brył.

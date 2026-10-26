@@ -14,6 +14,10 @@ w pełni offline, orientacja pozioma.
   z deterministyczną prognozą.
 - 4 megastruktury, Galactic Rebirth z 7 ulepszeniami trwałymi i 5 specjalizacjami.
 - Zapis automatyczny, kopia zapasowa, migracje, eksport/import, produkcja offline z raportem.
+- Grafika 3D (Three.js, lokalnie): stacja z reaktorem i modułami rosnącymi z poziomami budynków,
+  planety 3D z atmosferą i światłami kolonii, interaktywna spiralna galaktyka z flotami w locie.
+  Interfejs pozostaje 2D (HTML) na wierzchu. Ustawienia → Grafika 3D: automatycznie / wysoka /
+  niska / wyłączona; bez WebGL gra działa w 2D.
 
 Dokumentacja: [GAME_DESIGN](docs/GAME_DESIGN.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) ·
 [ECONOMY_BALANCE](docs/ECONOMY_BALANCE.md).
@@ -54,6 +58,13 @@ npm run sim -- 60
 npm run fullrun -- 40 1 --rebirth
 ```
 
+Three.js jest dołączony do repozytorium w `www/vendor/` (licencja MIT w `three.LICENSE.txt`).
+Po aktualizacji pakietu `three` skopiuj go ponownie:
+
+```bash
+npm run vendor
+```
+
 ## Android (Cordova)
 
 ```bash
@@ -90,12 +101,18 @@ Obejście do sprawdzenia: skopiować projekt do ścieżki ASCII (np. `C:\dev\sta
 - [ ] Wysłanie ekspedycji bojowej: prognoza, ostrzeżenie i wymagane potwierdzenie przy ryzyku strat.
 - [ ] Galactic Rebirth: podsumowanie resetu, checkbox, drugie potwierdzenie.
 - [ ] Eksport → reset → import zapisu.
-- [ ] „Ogranicz animacje” wyłącza animacje.
+- [ ] „Ogranicz animacje” wyłącza animacje (sceny 3D zatrzymują ruch i rysują ~12 klatek/s).
+- [ ] Grafika 3D: płynność na słabszym telefonie w trybie „Niska”; zmiana jakości w Ustawieniach bez restartu.
+- [ ] Galaktyka 3D: obrót palcem, przybliżanie szczypnięciem, wybór sektora dotknięciem.
+- [ ] Wyjście do tła i powrót: scena 3D wznawia się (także po utracie kontekstu WebGL).
 
 ## Znane ograniczenia
 
 - Brak zbudowanego APK (patrz wyżej) i brak testów na fizycznym urządzeniu.
-- Ilustracje planet i ikony są proceduralne/wektorowe (lokalne SVG), bez grafik rastrowych.
+- Grafika jest w pełni proceduralna (tekstury planet z szumu, modele statków z brył) — bez
+  modeli i tekstur tworzonych przez grafika.
+- Wydajność 3D sprawdzona tylko w przeglądarce na komputerze (30 kl./s w trybie „Niska”,
+  ~50 wywołań rysowania); brak pomiarów na fizycznym telefonie.
 - Model transportu jest celowo prosty (jeden kurs naraz na trasę, stałe czasy lotu).
 - Walka jest deterministyczna (bez losowości), więc prognoza zawsze odpowiada wynikowi.
 - Balans późnej gry oparty na symulacjach botów; „Brama Galaktyczna” nie została osiągnięta przez bota.

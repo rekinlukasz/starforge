@@ -7,6 +7,7 @@ import { MISSION_MAP } from '../../data/missions.js';
 import { ACHIEVEMENT_MAP } from '../../data/achievements.js';
 import { AUTOBUY_THRESHOLDS } from '../systems/AutomationSystem.js';
 import { BigNumber } from './BigNumber.js';
+import { GRAPHICS_OPTIONS } from '../render3d/layout.js';
 import { sanitizeSpace } from './ValidationSpace.js';
 
 const MAX_LOG = 50;
@@ -112,6 +113,7 @@ export function sanitizeState(raw, now = Date.now()) {
   s.settings.buyMode = ['1', '10', 'next', 'max'].includes(settings.buyMode) ? settings.buyMode : DEFAULT_SETTINGS.buyMode;
   s.settings.autosaveSeconds = finiteNumber(settings.autosaveSeconds, DEFAULT_SETTINGS.autosaveSeconds, 5, 600);
   s.settings.reduceMotion = Boolean(settings.reduceMotion);
+  s.settings.graphics = GRAPHICS_OPTIONS.includes(settings.graphics) ? settings.graphics : DEFAULT_SETTINGS.graphics;
 
   return s;
 }

@@ -1,4 +1,5 @@
 import { SECTORS } from '../../../data/sectors.js';
+import { PLANET_MAP } from '../../../data/planets.js';
 import { MEGASTRUCTURES } from '../../../data/megastructures.js';
 import {
   PRESTIGE_RESET, PRESTIGE_KEPT, PRESTIGE_UPGRADE_MAP, PRESTIGE_SPECIALIZATIONS, PRESTIGE_FORMULA,
@@ -8,14 +9,11 @@ import { icon } from '../Icons.js';
 import { costView } from '../components.js';
 import { effectText } from '../effectText.js';
 import { prestigeUpgradeList } from '../prestigeUpgrades.js';
+import { sectorMapPosition } from '../../render3d/layout.js';
 import { formatDuration, formatNumber } from '../../utils/Formatter.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-// Map layout (percent coordinates) — purely presentational.
-const POS = {
-  innerBelt: [14, 52], cometCloud: [30, 22], outerReach: [34, 70], jovianDeep: [50, 18],
-  toxicVeil: [56, 58], verdantArm: [54, 86], pirateHaven: [74, 80], precursorRuins: [74, 42], anomalyRift: [90, 22],
-};
+const POS = Object.fromEntries(SECTORS.map((s, i) => [s.id, sectorMapPosition(s.id, i)]));
 
 export class GalaxyScreen {
   constructor(ui) {
@@ -35,10 +33,94 @@ export class GalaxyScreen {
     for (const m of MEGASTRUCTURES) this.megaGrid.append(this.megaCard(m));
     return h('div', { class: 'screen screen-galaxy' }, [
       h('div', { class: 'screen-toolbar' }, [h('h1', { text: 'Galaktyka' })]),
-      h('section', { class: 'panel galaxy-panel' }, [h('h2', { class: 'panel-title', text: 'Mapa sektorów' }), this.map]),
+      h('section', { class: 'panel galaxy-panel' }, [h('h2', { class: 'panel-title', text: 'Mapa sektorów' }), this.map, this.buildViewport(), this.sectorInfo]),
       h('section', { class: 'card-section' }, [h('h2', { class: 'section-title', text: 'Megastruktury' }), this.megaGrid]),
       h('section', { class: 'panel' }, [h('h2', { class: 'panel-title', text: 'Galactic Rebirth' }), this.prestigeInfo, h('div', { class: 'quick-row' }, [this.prestigeBtn])]),
     ]);
+  }
+
+  // 3D viewport: the WebGL galaxy shows through this transparent area.
+  // Labels are DOM elements positioned every frame from projected 3D points.
+  buildViewport() {
+    this.sectorInfo = h('div', { class: 'sector-info', hidden: true });
+    this.labels = new Map();
+    this.viewport3d = h('div', { class: 'galaxy-viewport', 'aria-label': 'Mapa galaktyki 3D — przeciągnij, aby obrócić, rozsuń palce, aby przybliżyć' });
+    this.viewport3d.append(h('span', { class: 'viewport-hint', text: 'Przeciągnij, aby obrócić · szczypnij, aby przybliżyć · dotknij sektora' }));
+    for (const s of SECTORS) {
+      const label = h('button', { class: 'sector-label', dataset: { sector: s.id } }, [h('span', { class: 'map-label' })]);
+      label.addEventListener('click', (e) => { e.stopPropagation(); this.selectSector(s.id); });
+      label.addEventListener('pointerdown', (e) => e.stopPropagation());
+      this.viewport3d.append(label);
+      this.labels.set(s.id, label);
+    }
+    return this.viewport3d;
+  }
+
+  attach3D(renderer) {
+    this.renderer = renderer;
+    if (!this.controlsAttached) {
+      this.controlsAttached = true;
+      renderer.attachGalaxyControls(this.viewport3d, (id) => this.selectSector(id));
+    }
+    renderer.onGalaxyFrame = (pts) => this.placeLabels(pts);
+  }
+
+  detach3D() {
+    this.renderer = null;
+  }
+
+  sceneOptions() {
+    const rect = () => (this.el.hidden ? null : this.viewport3d.getBoundingClientRect());
+    return {
+      anchor: () => {
+        const r = rect();
+        return r && r.width ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
+      },
+      viewport: rect,
+    };
+  }
+
+  placeLabels(pts) {
+    if (this.el.hidden) return;
+    const r = this.viewport3d.getBoundingClientRect();
+    for (const [id, label] of this.labels) {
+      const p = pts[id];
+      const x = p.x - r.left;
+      const y = p.y - r.top;
+      const inside = p.visible && x > 0 && y > 0 && x < r.width && y < r.height;
+      label.hidden = !inside;
+      if (inside) label.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+    }
+  }
+
+  selectSector(id) {
+    this.selected = id === this.selected ? null : id;
+    this.renderer?.selectSector(this.selected);
+    this.updateSectorInfo(true);
+  }
+
+  updateSectorInfo(force = false) {
+    const g = this.game;
+    const s = SECTORS.find((x) => x.id === this.selected);
+    this.sectorInfo.hidden = !s;
+    for (const [id, label] of this.labels) setClass(label, 'selected', id === this.selected);
+    if (!s) return;
+    const known = g.planets.isSectorDiscovered(s.id);
+    const sig = `${s.id}${known}${g.state.expeditions.active.length}${JSON.stringify(g.state.expeditions.completions)}`;
+    if (!force && this.sectorInfo.dataset.sig === sig) return;
+    this.sectorInfo.dataset.sig = sig;
+    clear(this.sectorInfo);
+    const danger = ['Bezpieczny', 'Niskie', 'Umiarkowane', 'Wysokie', 'Ekstremalne', 'Śmiertelne'][s.danger];
+    const planets = s.expeditions.flatMap((e) => e.discovers?.planets ?? []).filter((p) => g.planets.status(p) !== 'undiscovered');
+    this.sectorInfo.append(
+      h('div', { class: 'card-titles' }, [
+        h('span', { class: 'eyebrow', text: known ? `Zagrożenie: ${danger}` : 'Sektor nieodkryty' }),
+        h('h3', { text: known ? s.name : 'Nieznany sektor' }),
+      ]),
+      h('p', { class: 'muted', text: known ? s.description : 'Wyślij zwiadowcę z sąsiedniego, odkrytego sektora, aby poznać ten obszar.' }),
+      known && planets.length ? h('p', { text: `Planety: ${planets.map((p) => (g.planets.status(p) === 'colonized' ? `${PLANET_MAP[p].name} (kolonia)` : PLANET_MAP[p].name)).join(', ')}` }) : null,
+      known ? h('button', { class: 'btn btn-sm btn-primary', text: 'Wyprawy w tym sektorze', onclick: () => this.ui.navigation.go('exploration') }) : null,
+    );
   }
 
   buildMap() {
@@ -108,6 +190,13 @@ export class GalaxyScreen {
       setText(label, known ? s.name : '???');
     }
     for (const l of this.mapLinks) setClass(l.line, 'known', g.planets.isSectorDiscovered(l.to));
+    for (const s of SECTORS) {
+      const label = this.labels.get(s.id);
+      const known = g.planets.isSectorDiscovered(s.id);
+      setText(label.firstChild, known ? s.name : '???');
+      setClass(label, 'known', known);
+    }
+    this.updateSectorInfo();
 
     for (const m of MEGASTRUCTURES) {
       const c = this.megaCards.get(m.id);

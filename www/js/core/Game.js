@@ -289,6 +289,13 @@ export class Game {
     this.events.emit('settingsChanged');
   }
 
+  setGraphics(value) {
+    if (!['auto', 'high', 'low', 'off'].includes(value)) return false;
+    this.state.settings.graphics = value;
+    this.events.emit('graphicsChanged', value);
+    return true;
+  }
+
   save(now = Date.now()) {
     const result = this.saves.save(this.state, now);
     this.events.emit(result.ok ? 'saved' : 'saveFailed', result.error);
