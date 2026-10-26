@@ -1,12 +1,9 @@
 import { THREE, starField, nebulaSphere, atmosphere, canvasTexture, glowSprite, disposeObject } from './common.js';
 import { planetSurfaceCanvas, cloudCanvas } from './textures.js';
 import { PLANET_MAP } from '../../data/planets.js';
+import { PLANET_LOOK, planetModelId } from './layout.js';
+import { modelLibrary, makePlanet } from './modelLibrary.js';
 
-const ATMOSPHERE = {
-  rocky: 0xc9b9a6, oceanic: 0x6fc3ff, desert: 0xffd28a, ice: 0xd8f3ff, volcanic: 0xff7a3d,
-  gas: 0xf7d9a6, toxic: 0xb8ff6a, terraformable: 0x9fd0ff, ruins: 0xc9b8ff, anomaly: 0xd48bff,
-};
-const CLOUDY = new Set(['oceanic', 'terraformable', 'toxic', 'ice']);
 
 // One large planet in focus. Rebuilt when the focused planet, its
 // terraforming stage or colony size changes.
@@ -41,7 +38,7 @@ export class PlanetView {
   sync(game) {
     const id = this.planetId;
     const colony = id ? game.colonies.colony(id) : null;
-    const sig = `${id}:${colony?.terraform.stage ?? 0}:${colony ? game.colonies.totalLevels(id) : -1}:${id ? game.planets.status(id) : ''}`;
+    const sig = `${id}:${colony?.terraform.stage ?? 0}:${colony ? game.colonies.totalLevels(id) : -1}:${id ? game.planets.status(id) : ''}:${modelLibrary.version}`;
     if (sig === this.signature) return;
     this.signature = sig;
     disposeObject(this.group);
@@ -50,29 +47,29 @@ export class PlanetView {
     const p = PLANET_MAP[id];
     const known = game.planets.status(id) === 'analyzed' || game.planets.status(id) === 'colonized';
     const stage = colony?.terraform.stage ?? 0;
-    const width = this.quality.name === 'high' ? 1024 : 512;
-    const tex = canvasTexture(`surf:${p.type}:${id}:${width}:${stage}`, () => planetSurfaceCanvas(p.type, id, { width, terraformStage: stage }));
-    const radius = p.type === 'gas' ? 5.2 : 4.6;
-    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0 });
-    if (!known) mat.color.setHex(0x55606e); // unanalysed: muted, details unknown
-    this.planet = new THREE.Mesh(new THREE.SphereGeometry(radius, 64, 48), mat);
-    this.planet.rotation.z = 0.35;
-    this.group.add(this.planet);
-    this.group.add(atmosphere(radius * 1.06, ATMOSPHERE[p.type] ?? 0xffffff, p.type === 'rocky' && !stage ? 0.5 : 1.1));
-    this.clouds = null;
-    if (CLOUDY.has(p.type) || stage > 0) {
-      const ct = canvasTexture(`clouds:${id}:${width}`, () => cloudCanvas(id, width / 2));
-      this.clouds = new THREE.Mesh(new THREE.SphereGeometry(radius * 1.015, 48, 32), new THREE.MeshStandardMaterial({ map: ct, transparent: true, depthWrite: false, opacity: p.type === 'toxic' ? 0.6 : 0.85 }));
-      this.group.add(this.clouds);
+    const look = PLANET_LOOK[p.type] ?? PLANET_LOOK.rocky;
+    const modelId = planetModelId(id, stage);
+    modelLibrary.ensure('planet', modelId); // async; the signature includes the library version
+    const glb = makePlanet(modelId);
+    const radius = glb?.extras.radius ?? look.radius ?? 4.6;
+    let surfaceRadius; // radius of the Surface mesh in its own coordinates
+    if (glb) {
+      glb.model.scale.setScalar(radius);
+      this.group.add(glb.model);
+      this.planet = glb.model.getObjectByName('Surface');
+      this.clouds = glb.model.getObjectByName('Clouds') ?? null;
+      surfaceRadius = 1;
+      if (!known) {
+        // Unanalysed: details unknown, so darken without touching shared materials.
+        // The shell sits above the clouds (1.015) to avoid z-fighting with the surface.
+        this.planet.add(new THREE.Mesh(new THREE.SphereGeometry(1.03, 48, 24), new THREE.MeshBasicMaterial({ color: 0x0a0e16, transparent: true, opacity: 0.55, depthWrite: false })));
+      }
+    } else {
+      this.buildProcedural(p, id, radius, stage, known, look);
+      surfaceRadius = radius;
     }
-    if (p.type === 'gas') {
-      const ring = new THREE.Mesh(
-        new THREE.RingGeometry(radius * 1.35, radius * 2.1, 96),
-        new THREE.MeshBasicMaterial({ color: 0xe8cfa0, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }),
-      );
-      ring.rotation.x = Math.PI / 2.3;
-      this.group.add(ring);
-    }
+    const intensity = stage > 0 ? 1.1 : look.atmosphereIntensity;
+    this.group.add(atmosphere(radius * 1.06, glb?.extras.atmosphere ?? look.atmosphere, intensity));
     if (p.type === 'anomaly') {
       const singularity = glowSprite(0xe9b8ff, 4, 0.9);
       singularity.position.set(radius * 1.8, 1.5, -1);
@@ -88,7 +85,8 @@ export class PlanetView {
         const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
         for (let i = 0; i < n; i++) {
           const u = rand() * 1.6 - 0.8; const th = rand() * Math.PI * 2; const k = Math.sqrt(1 - u * u);
-          pos.set([Math.cos(th) * k * radius * 1.005, u * radius * 1.005, Math.sin(th) * k * radius * 1.005], i * 3);
+          const r = surfaceRadius * 1.005;
+          pos.set([Math.cos(th) * k * r, u * r, Math.sin(th) * k * r], i * 3);
         }
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -102,6 +100,32 @@ export class PlanetView {
     moon.position.set(radius * 2.4, 0.6, 0);
     this.moonPivot.add(moon);
     this.group.add(this.moonPivot);
+  }
+
+  // Fallback while the planet GLB loads (or if it is unavailable): the same
+  // generators the GLB build uses, drawn on canvases at runtime.
+  buildProcedural(p, id, radius, stage, known, look) {
+    const width = this.quality.name === 'high' ? 1024 : 512;
+    const tex = canvasTexture(`surf:${p.type}:${id}:${width}:${stage}`, () => planetSurfaceCanvas(p.type, id, { width, terraformStage: stage }));
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: look.roughness, metalness: 0 });
+    if (!known) mat.color.setHex(0x55606e);
+    this.planet = new THREE.Mesh(new THREE.SphereGeometry(radius, 64, 48), mat);
+    this.planet.rotation.z = 0.35;
+    this.group.add(this.planet);
+    this.clouds = null;
+    if (look.clouds || stage > 0) {
+      const ct = canvasTexture(`clouds:${id}:${width}`, () => cloudCanvas(id, width / 2));
+      this.clouds = new THREE.Mesh(new THREE.SphereGeometry(radius * 1.015, 48, 32), new THREE.MeshStandardMaterial({ map: ct, transparent: true, depthWrite: false, opacity: p.type === 'toxic' ? 0.6 : 0.85 }));
+      this.group.add(this.clouds);
+    }
+    if (look.rings) {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(radius * 1.35, radius * 2.1, 96),
+        new THREE.MeshBasicMaterial({ color: 0xe8cfa0, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }),
+      );
+      ring.rotation.x = Math.PI / 2.3;
+      this.group.add(ring);
+    }
   }
 
   update(dt, game, { motion }) {

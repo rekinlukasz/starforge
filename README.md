@@ -65,6 +65,39 @@ Po aktualizacji pakietu `three` skopiuj go ponownie:
 npm run vendor
 ```
 
+## Modele 3D (GLB)
+
+Statki, moduły stacji i planety są plikami glTF binarnymi:
+
+- `www/assets/ships/<id>.glb` — 9 typów statków (276–2912 trójkątów),
+- `www/assets/station/<kategoria>.glb` — 6 modułów pierścienia stacji (energetyka, wydobycie,
+  przetwarzanie, infrastruktura, nauka, kosmos; 556–1656 trójkątów),
+- `www/assets/planets/<id>.glb` — 10 planet + 3 etapy terraformowania Edenu (`eden-t1…t3`):
+  kula z teksturą 1024 × 512 i mapą reliefu (kratery, góry), chmury z przezroczystością, pierścienie
+  gazowego olbrzyma (ok. 0,35–0,5 MB każda, łącznie ok. 6 MB; wczytywane dopiero, gdy potrzebne).
+
+Generuje je skrypt z projektów w `tools/models/` (`ships.mjs`, `station.mjs`, `planets.mjs`,
+wspólne `kit.mjs`, `gltf.mjs`, `png.mjs`); tekstury planet pochodzą z tych samych generatorów,
+których gra używa jako zapasu (`www/js/render3d/textures.js`):
+
+```bash
+npm run build:models
+```
+
+Każdy model to jeden węzeł z dwiema warstwami: `Body` (oświetlony materiał PBR, kolory zapisane
+w wierzchołkach) i `Glow` (świecące elementy, `KHR_materials_unlit`) — dwa wywołania rysowania na
+model; moduły stacji są rysowane instancjami. Modele można otworzyć w Blenderze
+(File → Import → glTF 2.0) albo podmienić na własne pod tą samą nazwą:
+
+- statki: przód w kierunku +Z, góra +Y, ok. 1 jednostka długości dla małych statków; opcjonalna
+  właściwość niestandardowa `engines` (glTF extras) na obiekcie statku: `[[x, y, z, rozmiar], …]`,
+- moduły: podstawa ok. 1 × 1 jednostki wyśrodkowana w zerze, spód przy y ≈ −0,3, front (strona
+  zewnętrzna pierścienia) w kierunku +X, góra +Y,
+- planety: kula o promieniu 1 w obiekcie o nazwie planety (np. `kepler`) z dziećmi `Surface`
+  (obowiązkowe), `Clouds` i `Rings` (opcjonalne); extras `atmosphere` (kolor) i `radius`.
+
+Jeśli plik się nie wczyta, gra użyje prostszych modeli zastępczych.
+
 ## Android (Cordova)
 
 ```bash
@@ -104,13 +137,16 @@ Obejście do sprawdzenia: skopiować projekt do ścieżki ASCII (np. `C:\dev\sta
 - [ ] „Ogranicz animacje” wyłącza animacje (sceny 3D zatrzymują ruch i rysują ~12 klatek/s).
 - [ ] Grafika 3D: płynność na słabszym telefonie w trybie „Niska”; zmiana jakości w Ustawieniach bez restartu.
 - [ ] Galaktyka 3D: obrót palcem, przybliżanie szczypnięciem, wybór sektora dotknięciem.
+- [ ] Flota: dotknięcie karty statku pokazuje jego model GLB obok stacji; modele wczytują się w APK.
+- [ ] Moduły stacji GLB pojawiają się na pierścieniu po zakupie budynków danej kategorii.
 - [ ] Wyjście do tła i powrót: scena 3D wznawia się (także po utracie kontekstu WebGL).
 
 ## Znane ograniczenia
 
 - Brak zbudowanego APK (patrz wyżej) i brak testów na fizycznym urządzeniu.
-- Grafika jest w pełni proceduralna (tekstury planet z szumu, modele statków z brył) — bez
-  modeli i tekstur tworzonych przez grafika.
+- Modele GLB (statki, moduły stacji, planety) są generowane skryptem — bryły z prymitywów,
+  tekstury planet z szumu i kraterów — nie zostały wykonane ręcznie przez grafika; pliki można
+  podmienić bez zmian w kodzie (patrz „Modele 3D”).
 - Wydajność 3D sprawdzona tylko w przeglądarce na komputerze (30 kl./s w trybie „Niska”,
   ~50 wywołań rysowania); brak pomiarów na fizycznym telefonie.
 - Model transportu jest celowo prosty (jeden kurs naraz na trasę, stałe czasy lotu).

@@ -97,3 +97,11 @@ html.has-3d .galaxy-viewport {
 @media (min-width: 761px) {
   html.has-3d .screen-planets .planet-grid { max-width: 52%; grid-template-columns: 1fr; }
 }
+
+/* Fleet: ship list on the left, the showcased GLB model on the right. */
+.ship-card { cursor: pointer; }
+.ship-card.focused { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(63, 208, 201, 0.35); }
+@media (min-width: 761px) {
+  html.has-3d .screen-fleet .ship-grid,
+  html.has-3d .screen-fleet > .panel { max-width: 52%; grid-template-columns: 1fr; }
+}

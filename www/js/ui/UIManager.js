@@ -140,6 +140,10 @@ export class UIManager {
     this.renderer3d?.focusPlanet(id);
   }
 
+  showcaseShip(id) {
+    this.renderer3d?.showcaseShip(id);
+  }
+
   render() {
     this.navigation.update(this.game.missions.claimableCount());
     this.resourceBar.update();

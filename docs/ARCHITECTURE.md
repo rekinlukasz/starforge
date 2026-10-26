@@ -94,4 +94,18 @@ zapis i wyjście. Orientacja pozioma (`config.xml`), obszary bezpieczne przez `e
   dla modułów/asteroid/paneli, statki scalane do jednej siatki, pauza w tle, obsługa
   `webglcontextlost/restored`.
 - Bez zewnętrznych zasobów: tekstury planet, mgławice i poświaty rysowane na płótnie 2D z
-  deterministycznego szumu; modele statków składane z brył.
+  deterministycznego szumu.
+- Planety GLB: `www/assets/planets/*.glb` (tekstury PNG osadzone w pliku, relief jako mapa
+  normalnych, chmury i pierścienie jako osobne węzły). Ładowane na żądanie
+  (`modelLibrary.ensure`); do czasu wczytania `PlanetView` rysuje tę samą planetę z generatorów
+  w `textures.js` (czyste funkcje pikseli, wspólne z Node). Poświata atmosfery, światła miast i
+  księżyc są dodawane w grze. CSP dopuszcza `blob:` w `img-src`/`connect-src`, bo GLTFLoader
+  dekoduje osadzone obrazy przez adresy blob.
+- Modele GLB: `www/assets/ships/*.glb` (statki) i `www/assets/station/*.glb` (moduły pierścienia,
+  po jednym na kategorię budynków) budowane przez `tools/build-models.mjs` z `tools/models/`
+  (własny zapis GLB: jeden węzeł, warstwy `Body` (PBR, COLOR_0) i `Glow` (unlit), `extras` z
+  danymi rozgrywki, np. punkty dysz). W grze ładuje je `modelLibrary` (vendorowany GLTFLoader):
+  statki jako klony współdzielące geometrię, moduły jako `InstancedMesh` (po jednym na warstwę i
+  kategorię). Zasoby biblioteki są oznaczone `userData.shared` i pomijane przy zwalnianiu sceny.
+  Brak pliku → model zastępczy. `tests/models.test.js` sprawdza format, wczytanie GLTFLoaderem,
+  kolory wierzchołków, orientację, wymiary modułów i rozmiar plików.

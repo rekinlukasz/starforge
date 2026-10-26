@@ -3,6 +3,14 @@ import { StationView } from './StationView.js';
 import { PlanetView } from './PlanetView.js';
 import { GalaxyView } from './GalaxyView.js';
 import { viewForScreen } from './layout.js';
+import { modelLibrary } from './modelLibrary.js';
+import { RING_CATEGORIES } from './layout.js';
+import { SHIPS } from '../../data/ships.js';
+
+const MODEL_REQUESTS = [
+  ...SHIPS.map((s) => ({ kind: 'ship', id: s.id })),
+  ...RING_CATEGORIES.map((c) => ({ kind: 'module', id: c })),
+];
 
 export function isWebGLAvailable() {
   try {
@@ -50,6 +58,7 @@ export class Renderer3D {
     window.addEventListener('resize', this.onResize);
     this.resize();
     document.documentElement.classList.add('has-3d');
+    modelLibrary.load(MODEL_REQUESTS); // async; scenes rebuild when models land
     requestAnimationFrame(this.frame);
   }
 
@@ -74,6 +83,10 @@ export class Renderer3D {
 
   pulseReactor() {
     this.views.station?.doPulse();
+  }
+
+  showcaseShip(id) {
+    this.view('station').setShowcase(id);
   }
 
   focusPlanet(id) {
@@ -193,6 +206,8 @@ export class Renderer3D {
     for (const v of Object.values(this.views)) v.dispose();
     this.views = {};
     disposeTextures();
+    modelLibrary.dispose();
+    modelLibrary.load(MODEL_REQUESTS);
     const screen = this.canvas.dataset.screen;
     if (screen) this.setScreen(screen, { anchor: this.anchor, viewport: this.viewport });
   }
@@ -203,6 +218,7 @@ export class Renderer3D {
     for (const v of Object.values(this.views)) v.dispose();
     this.views = {};
     disposeTextures();
+    modelLibrary.dispose();
     this.renderer?.dispose();
     this.canvas?.remove();
     document.documentElement.classList.remove('has-3d');

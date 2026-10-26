@@ -13,6 +13,7 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.json': 'application/json',
+  '.glb': 'model/gltf-binary',
 };
 
 createServer(async (req, res) => {

@@ -132,3 +132,24 @@ export function sectorState(game, sector) {
 export function defaultPlanet(game) {
   return game.colonies.ids()[0] ?? game.planets.knownPlanets()[0]?.id ?? null;
 }
+
+// Visual parameters per planet type, shared by tools/build-models.mjs (GLB
+// textures and extras) and the runtime fallback. relief = normal-map strength
+// (0 = smooth); clouds = has a cloud layer; rings = gas-giant rings.
+export const PLANET_LOOK = {
+  rocky: { atmosphere: 0xc9b9a6, atmosphereIntensity: 0.5, relief: 3, clouds: false, roughness: 0.95 },
+  oceanic: { atmosphere: 0x6fc3ff, atmosphereIntensity: 1.1, relief: 0.6, clouds: true, roughness: 0.55 },
+  desert: { atmosphere: 0xffd28a, atmosphereIntensity: 1.0, relief: 1.6, clouds: false, roughness: 0.95 },
+  ice: { atmosphere: 0xd8f3ff, atmosphereIntensity: 1.1, relief: 1.4, clouds: true, roughness: 0.6 },
+  volcanic: { atmosphere: 0xff7a3d, atmosphereIntensity: 1.1, relief: 3.5, clouds: false, roughness: 0.9 },
+  gas: { atmosphere: 0xf7d9a6, atmosphereIntensity: 1.1, relief: 0, clouds: false, roughness: 1, rings: true, radius: 5.2 },
+  toxic: { atmosphere: 0xb8ff6a, atmosphereIntensity: 1.1, relief: 0.8, clouds: true, roughness: 0.9 },
+  terraformable: { atmosphere: 0x9fd0ff, atmosphereIntensity: 1.1, relief: 2.5, clouds: false, roughness: 0.9 },
+  ruins: { atmosphere: 0xc9b8ff, atmosphereIntensity: 1.1, relief: 2.5, clouds: false, roughness: 0.9 },
+  anomaly: { atmosphere: 0xd48bff, atmosphereIntensity: 1.1, relief: 1.2, clouds: false, roughness: 0.8 },
+};
+
+// GLB file id for a planet, including terraforming stage variants (eden-t1…t3).
+export function planetModelId(planetId, terraformStage = 0) {
+  return terraformStage > 0 ? `${planetId}-t${terraformStage}` : planetId;
+}

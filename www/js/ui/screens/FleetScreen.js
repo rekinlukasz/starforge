@@ -21,7 +21,7 @@ export class FleetScreen {
   build() {
     this.yardNote = h('p', { class: 'muted' });
     this.queueEl = h('div', { class: 'queue' });
-    this.shipGrid = h('div', { class: 'card-grid' });
+    this.shipGrid = h('div', { class: 'card-grid ship-grid' });
     this.routesEl = h('div', { class: 'route-list' });
     this.routeForm = h('div', { class: 'route-form' });
     this.logisticsSection = h('section', { class: 'card-section' }, [
@@ -43,6 +43,8 @@ export class FleetScreen {
       this.logisticsSection,
     ]);
     root.addEventListener('click', (e) => {
+      const card = e.target.closest('[data-ship]');
+      if (card) this.showcase(card.dataset.ship);
       const t = e.target.closest('[data-action]');
       if (!t || t.disabled) return;
       const { action, id, count } = t.dataset;
@@ -55,6 +57,23 @@ export class FleetScreen {
       this.update();
     });
     return root;
+  }
+
+  // 3D close-up of one ship type next to the station (when 3D is on).
+  showcase(id) {
+    this.showcased = id;
+    this.ui.showcaseShip(id);
+    for (const [sid, c] of this.shipCards) setClass(c.card, 'focused', sid === id);
+  }
+
+  attach3D() {
+    const g = this.game;
+    const first = SHIPS.find((s) => g.fleet.owned(s.id) > 0) ?? SHIPS.find((s) => g.fleet.isUnlocked(s.id)) ?? SHIPS[0];
+    this.showcase(this.showcased ?? first.id);
+  }
+
+  sceneOptions() {
+    return { anchor: () => ({ x: window.innerWidth * (window.innerWidth > 760 ? 0.76 : 0.5), y: window.innerHeight * 0.56 }) };
   }
 
   rebuildShips() {
@@ -72,7 +91,7 @@ export class FleetScreen {
       const b5 = h('button', { class: 'btn btn-sm btn-ghost', dataset: { action: 'build', id: s.id, count: '5' }, text: 'x5' });
       const up = h('button', { class: 'chip', dataset: { action: 'upgrade', id: s.id } });
       const repair = h('button', { class: 'chip', dataset: { action: 'repair', id: s.id } });
-      const card = h('article', { class: 'card' }, [
+      const card = h('article', { class: 'card ship-card', dataset: { ship: s.id } }, [
         h('header', { class: 'card-head' }, [icon(s.icon, 'icon card-icon'), h('div', { class: 'card-titles' }, [h('span', { class: 'eyebrow', text: SHIP_ROLES[s.role] }), h('h3', { text: s.name }), counts])]),
         h('p', { class: 'card-desc', text: s.description }),
         stats,
@@ -81,7 +100,7 @@ export class FleetScreen {
         note,
       ]);
       this.shipGrid.append(card);
-      this.shipCards.set(s.id, { counts, stats, cost, note, b1, b5, up, repair });
+      this.shipCards.set(s.id, { card, counts, stats, cost, note, b1, b5, up, repair });
     }
     if (!this.shipCards.size) this.shipGrid.append(h('p', { class: 'muted', text: 'Zbadaj „Loty międzyplanetarne”, aby odblokować pierwsze statki.' }));
   }
@@ -218,7 +237,11 @@ export class FleetScreen {
   update() {
     const g = this.game;
     const sig = SHIPS.map((s) => (g.fleet.isUnlocked(s.id) || g.fleet.owned(s.id) ? '1' : '0')).join('');
-    if (this.sigs.ships !== sig) { this.sigs.ships = sig; this.rebuildShips(); }
+    if (this.sigs.ships !== sig) {
+      this.sigs.ships = sig;
+      this.rebuildShips();
+      if (this.showcased) this.showcase(this.showcased);
+    }
     this.militaryNote.hidden = !SHIPS.some((s) => s.role === 'military' && g.fleet.isUnlocked(s.id));
     this.updateYard();
     this.updateShips();

@@ -1,8 +1,10 @@
-import { THREE, starField, nebulaSphere, glowSprite, atmosphere, canvasTexture, shipModel, disposeObject } from './common.js';
+import { THREE, starField, nebulaSphere, glowSprite, atmosphere, canvasTexture, disposeObject } from './common.js';
+import { makeShip, makePlanet, modelLibrary } from './modelLibrary.js';
 import { planetSurfaceCanvas } from './textures.js';
 import { RING_CATEGORIES, categoryLevels, moduleCount, scaledCount, visibleShips } from './layout.js';
 
 const RING_RADIUS = 7.5;
+const MODULE_SCALE = 0.62; // GLB modules have a ~1 x 1 footprint
 const CATEGORY_COLORS = {
   energy: 0xf2b84b, mining: 0xb08d57, processing: 0xef8f5b, infrastructure: 0x8aa4c8, science: 0x3fd0c9, space: 0xb48cff,
 };
@@ -12,7 +14,8 @@ const CAMERAS = {
   home: { target: [0, 0, 0], distance: 24, yaw: 0.6, pitch: 0.42, orbit: 0.03 },
   industry: { target: [-4, 0, 4], distance: 15, yaw: 2.1, pitch: 0.35, orbit: 0.015 },
   labs: { target: [4, 0, 3], distance: 14, yaw: 0.9, pitch: 0.5, orbit: 0.015 },
-  hangar: { target: [0, 0, 0], distance: 20, yaw: -0.4, pitch: 0.18, orbit: 0.02 },
+  // Fleet: close-up of the showcased ship parked outside the ring, station behind it.
+  hangar: { target: [0, 3, 25], distance: 6.5, yaw: 1.15, pitch: 0.22, orbit: 0.01 },
 };
 
 // The orbital station. Reads game state (never writes) and rebuilds its
@@ -105,9 +108,26 @@ export class StationView {
     return { modules, solar, asteroids, ships };
   }
 
+  // Background gas giant: the Aurelion planet GLB replaces the procedural
+  // sphere as soon as it has loaded.
+  syncGiant() {
+    if (this.giantGlb) return;
+    modelLibrary.ensure('planet', 'aurelion');
+    const glb = makePlanet('aurelion');
+    if (!glb) return;
+    glb.model.scale.setScalar(this.giant.geometry.parameters.radius);
+    glb.model.position.copy(this.giant.position);
+    this.scene.add(glb.model);
+    this.giant.visible = false;
+    this.giantGlb = glb.model;
+    this.giantSurface = glb.model.getObjectByName('Surface');
+  }
+
   sync(game) {
+    this.syncGiant();
     const c = this.counts(game);
-    const sig = JSON.stringify([c.modules, c.solar, c.asteroids, c.ships.map((s) => s.id)]);
+    this.syncShowcase();
+    const sig = JSON.stringify([c.modules, c.solar, c.asteroids, c.ships.map((s) => s.id), modelLibrary.version]);
     if (sig === this.signature) return;
     this.signature = sig;
     this.rebuildModules(c);
@@ -118,25 +138,38 @@ export class StationView {
   rebuildModules(c) {
     disposeObject(this.dynamic);
     this.dynamic.clear();
-    const box = new THREE.BoxGeometry(0.55, 0.42, 0.55);
     const arc = (Math.PI * 2) / RING_CATEGORIES.length;
+    const perRow = 8;
+    const flip = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
     RING_CATEGORIES.forEach((cat, ci) => {
       const n = c.modules[cat];
       if (!n) return;
-      const mat = new THREE.MeshStandardMaterial({ color: 0x9aa9bd, metalness: 0.6, roughness: 0.4, emissive: CATEGORY_COLORS[cat], emissiveIntensity: 0.35 });
-      const mesh = new THREE.InstancedMesh(box, mat, n);
-      const m = new THREE.Matrix4();
-      const perRow = 8;
+      // Modules alternate between the top and the underside of the ring
+      // (underside ones hang upside down); extra rows grow outward.
+      const matrices = [];
       for (let i = 0; i < n; i++) {
         const row = Math.floor(i / perRow);
         const col = i % perRow;
         const a = ci * arc + 0.12 + (col / perRow) * (arc - 0.24);
-        const r = RING_RADIUS + 0.8 + row * 0.7;
-        const y = (col % 2 ? 0.35 : -0.35) * (row ? 0.4 : 1);
-        m.makeRotationY(-a);
-        m.setPosition(Math.cos(a) * r, y, Math.sin(a) * r);
-        mesh.setMatrixAt(i, m);
+        const r = RING_RADIUS + 0.75 + row * 0.75;
+        const under = col % 2 === 1;
+        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -a, 0));
+        if (under) q.multiply(flip);
+        matrices.push(new THREE.Matrix4().compose(
+          new THREE.Vector3(Math.cos(a) * r, under ? -0.32 : 0.32, Math.sin(a) * r),
+          q,
+          new THREE.Vector3(MODULE_SCALE, MODULE_SCALE, MODULE_SCALE),
+        ));
       }
+      const glb = modelLibrary.createModuleInstances(cat, matrices);
+      if (glb) {
+        this.dynamic.add(glb);
+        return;
+      }
+      // Fallback until (or if) the GLB module is unavailable: tinted boxes.
+      const mat = new THREE.MeshStandardMaterial({ color: 0x9aa9bd, metalness: 0.6, roughness: 0.4, emissive: CATEGORY_COLORS[cat], emissiveIntensity: 0.35 });
+      const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), mat, n);
+      matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
       this.dynamic.add(mesh);
     });
     // Solar panel arms
@@ -189,7 +222,7 @@ export class StationView {
     disposeObject(this.ships);
     this.ships.clear();
     this.shipList = list.map((s, i) => {
-      const model = shipModel(s.id);
+      const model = makeShip(s.id);
       const scale = s.id === 'cruiser' ? 1.3 : 1;
       model.scale.setScalar(scale);
       this.ships.add(model);
@@ -198,6 +231,39 @@ export class StationView {
   }
 
   // ---- per frame -----------------------------------------------------------
+
+  // ---- ship showcase (Fleet tab) ---------------------------------------------
+
+  setShowcase(id) {
+    this.showcaseId = id;
+  }
+
+  syncShowcase() {
+    if (!this.showcase) {
+      this.showcase = new THREE.Group();
+      this.showcase.position.set(0, 3, 25); // beyond orbiting traffic, station in the background
+      this.scene.add(this.showcase);
+      const key = new THREE.PointLight(0xdff6ff, 30, 14);
+      key.position.set(2.5, 2.5, 3);
+      this.showcase.add(key);
+      this.showcaseLight = key;
+    }
+    const sig = `${this.showcaseId}:${modelLibrary.version}`;
+    if (sig === this.showcaseSig) return;
+    this.showcaseSig = sig;
+    if (this.showcaseModel) {
+      this.showcase.remove(this.showcaseModel);
+      disposeObject(this.showcaseModel);
+      this.showcaseModel = null;
+    }
+    if (!this.showcaseId) return;
+    const model = makeShip(this.showcaseId);
+    // Normalise to ~2.6 units long so every class fills the close-up.
+    const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
+    model.scale.setScalar(2.6 / Math.max(0.3, size.z, size.x));
+    this.showcase.add(model);
+    this.showcaseModel = model;
+  }
 
   setCamera(mode) {
     this.camGoal = CAMERAS[mode] ?? CAMERAS.home;
@@ -224,6 +290,7 @@ export class StationView {
       this.station.rotation.y += dt * 0.04;
       this.belt.rotation.y += dt * 0.01;
       this.giant.rotation.y += dt * 0.01;
+      if (this.giantSurface) this.giantSurface.rotation.y += dt * 0.01;
       for (const s of this.shipList) {
         const a = s.phase + this.time * s.speed;
         s.model.position.set(Math.cos(a) * s.radius, s.height, Math.sin(a) * s.radius);
@@ -232,6 +299,9 @@ export class StationView {
     } else {
       for (const s of this.shipList) s.model.position.set(Math.cos(s.phase) * s.radius, s.height, Math.sin(s.phase) * s.radius);
     }
+    const showing = this.camGoal === CAMERAS.hangar && this.showcaseModel;
+    this.showcase.visible = Boolean(showing);
+    if (showing && motion) this.showcaseModel.rotation.y += dt * 0.35;
     // Smooth camera transition and slow orbit.
     const g = this.camGoal;
     const k = Math.min(1, dt * 2.5);

@@ -107,8 +107,9 @@ function engine(x, y, z, size = 0.35) {
   return s;
 }
 
-// Builds a small ship model; +Z is forward. Scale ~1 unit long for small ships.
-export function shipModel(type) {
+// Procedural fallback used when a ship's GLB model is not available.
+// +Z is forward. Scale ~1 unit long for small ships.
+export function proceduralShipModel(type) {
   const g = new THREE.Group();
   const role = ['escort', 'frigate', 'cruiser'].includes(type) ? 'military' : 'civil';
   const hull = HULL[role];
@@ -209,8 +210,12 @@ function mergeShip(group) {
   return out;
 }
 
+// Disposes GPU resources under `root`, except those shared with a loaded
+// asset (ship GLB instances), which belong to the ship library.
 export function disposeObject(root) {
   root.traverse((o) => {
+    if (o.isInstancedMesh) o.dispose(); // frees per-instance GPU buffers only
+    if (o.userData?.shared) return;
     o.geometry?.dispose?.();
     const m = o.material;
     if (Array.isArray(m)) m.forEach((x) => x.dispose());

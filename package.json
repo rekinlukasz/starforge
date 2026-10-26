@@ -12,6 +12,7 @@
     "sim": "node tools/simulate.mjs",
     "fullrun": "node tools/fullrun.mjs",
     "vendor": "node tools/vendor.mjs",
+    "build:models": "node tools/build-models.mjs",
     "cordova:prepare": "cordova prepare android",
     "cordova:build": "cordova build android",
     "cordova:run": "cordova run android"

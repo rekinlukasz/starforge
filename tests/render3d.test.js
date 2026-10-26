@@ -123,6 +123,7 @@ describe('UI ↔ 3D contract', () => {
       setScreen(id, opts) { this.calls.push({ id, opts }); },
       pulseReactor() { this.pulses++; },
       focusPlanet(id) { this.focused = id; },
+      showcaseShip(id) { this.showcased = id; },
       attachGalaxyControls() {},
       selectSector() {},
     };
@@ -149,6 +150,11 @@ describe('UI ↔ 3D contract', () => {
     expect(typeof r.calls.at(-1).opts.viewport).toBe('function');
     ui.navigation.go('planets');
     expect(r.focused).toBe('kepler');
+    g.fleet.entry('frigate').owned = 1;
+    ui.navigation.go('fleet');
+    ui.render();
+    document.querySelector('[data-ship="frigate"] .card-desc').click();
+    expect(r.showcased).toBe('frigate');
   });
 
   it('reactor taps pulse the 3D reactor; the UI works without a renderer', () => {
